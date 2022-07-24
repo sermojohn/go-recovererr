@@ -26,7 +26,6 @@ func Retry(ctx context.Context, f func() error, intervals <-chan time.Time, retr
 			return ctx.Err()
 		case <-intervals:
 		}
-		// fmt.Println("will retry")
 	}
 }
 

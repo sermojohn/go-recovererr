@@ -46,14 +46,16 @@ func retry(ctx context.Context, f func() error, intervals <-chan time.Time, retr
 
 type RetryPolicy func(error) bool
 
-// RetryRecoverablePolicy will return retry if error is explicitly recoverable.
-// Any error with no recover context or non matching error will not be retried.
+// RetryRecoverablePolicy will return retry if error is recoverable
+// and not retry otherwise or for errors with no recovery context.
 func RetryRecoverablePolicy(err error) bool {
-	return DoRecover(err, false)
+	found, recover := DoRecover(err)
+	return found && recover
 }
 
-// SkipUnrecoverablePolicy will return not retry if error is explicitly unrecoverable.
-// Any error with no recover context will be retried.
-func SkipUnrecoverablePolicy(err error) bool {
-	return DoRecover(err, true)
+// RetryNonUnrecoverablePolicy will return retry if error is recoverable
+// or error with no recovery context is provided.
+func RetryNonUnrecoverablePolicy(err error) bool {
+	found, recover := DoRecover(err)
+	return !found || recover
 }

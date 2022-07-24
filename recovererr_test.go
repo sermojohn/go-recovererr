@@ -15,32 +15,44 @@ func TestDoRecover(t *testing.T) {
 	)
 	t.Run("recoverable wrapped error", func(t *testing.T) {
 		err := Recoverable(ConnectionError)
-		assert.True(t, DoRecover(err, false), err)
+		found, recover := DoRecover(err)
+		assert.True(t, found, err)
+		assert.True(t, recover, err)
 	})
 
 	t.Run("unrecoverable wrapped error", func(t *testing.T) {
 		err := Unrecoverable(ParseError)
-		assert.False(t, DoRecover(err, true), err)
+		found, recover := DoRecover(err)
+		assert.True(t, found, err)
+		assert.False(t, recover, err)
 	})
 
 	t.Run("recoverable wrapped error wrapped", func(t *testing.T) {
 		err := fmt.Errorf("failed to store object, %w", Recoverable(ConnectionError))
-		assert.True(t, DoRecover(err, false), err)
+		found, recover := DoRecover(err)
+		assert.True(t, found, err)
+		assert.True(t, recover, err)
 	})
 
 	t.Run("unrecoverable wrapped error", func(t *testing.T) {
 		err := fmt.Errorf("failed to parse object, %w", Unrecoverable(ParseError))
-		assert.False(t, DoRecover(err, true), err)
+		found, recover := DoRecover(err)
+		assert.True(t, found, err)
+		assert.False(t, recover, err)
 	})
 
 	t.Run("unrecoverable wrapped error", func(t *testing.T) {
 		err := &anyError{}
-		assert.False(t, DoRecover(err, false), err)
+		found, recover := DoRecover(err)
+		assert.False(t, found, err)
+		assert.False(t, recover, err)
 	})
 
 	t.Run("other recover error implementation", func(t *testing.T) {
 		err := &otherRecoverError{recover: true}
-		assert.True(t, DoRecover(err, false), err)
+		found, recover := DoRecover(err)
+		assert.True(t, found, err)
+		assert.True(t, recover, err)
 	})
 }
 

@@ -74,7 +74,7 @@ func Test_retry_retryRecoverablePolicy(t *testing.T) {
 	})
 }
 
-func Test_retry_skipUnrecoverablePolicy(t *testing.T) {
+func Test_retry_retryNonUnrecoverablePolicy(t *testing.T) {
 	t.Parallel()
 
 	t.Run("retry recoverable until cancellation", func(t *testing.T) {
@@ -83,7 +83,7 @@ func Test_retry_skipUnrecoverablePolicy(t *testing.T) {
 
 		recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
 
-		retry(ctx, recoverErrorAction.Call, time.Tick(time.Millisecond), SkipUnrecoverablePolicy)
+		retry(ctx, recoverErrorAction.Call, time.Tick(time.Millisecond), RetryNonUnrecoverablePolicy)
 
 		assert.True(t, recoverErrorAction.callCounter > 1)
 	})
@@ -94,7 +94,7 @@ func Test_retry_skipUnrecoverablePolicy(t *testing.T) {
 
 		anyErrorAction := &action{errors: []error{errors.New("failure")}}
 
-		retry(ctx, anyErrorAction.Call, time.Tick(time.Millisecond), SkipUnrecoverablePolicy)
+		retry(ctx, anyErrorAction.Call, time.Tick(time.Millisecond), RetryNonUnrecoverablePolicy)
 
 		assert.True(t, anyErrorAction.callCounter > 0)
 	})
@@ -105,7 +105,7 @@ func Test_retry_skipUnrecoverablePolicy(t *testing.T) {
 
 		unrecoverableErrorAction := &action{errors: []error{Unrecoverable(errors.New("failure"))}}
 
-		retry(ctx, unrecoverableErrorAction.Call, time.Tick(time.Millisecond), SkipUnrecoverablePolicy)
+		retry(ctx, unrecoverableErrorAction.Call, time.Tick(time.Millisecond), RetryNonUnrecoverablePolicy)
 
 		assert.Equal(t, 1, unrecoverableErrorAction.callCounter)
 	})
@@ -116,7 +116,7 @@ func Test_retry_skipUnrecoverablePolicy(t *testing.T) {
 
 		noErrorAction := &action{errors: []error{}}
 
-		retry(ctx, noErrorAction.Call, time.Tick(time.Millisecond), SkipUnrecoverablePolicy)
+		retry(ctx, noErrorAction.Call, time.Tick(time.Millisecond), RetryNonUnrecoverablePolicy)
 
 		assert.Equal(t, 1, noErrorAction.callCounter)
 	})

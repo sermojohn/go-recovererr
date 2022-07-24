@@ -21,7 +21,6 @@ func ExampleRetry_ExponentialBackoff() {
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancelFunc()
-
 	recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
 
 	Retry(ctx, recoverErrorAction.Call, backoff.NewTicker(backoffer).C, RetryRecoverablePolicy)

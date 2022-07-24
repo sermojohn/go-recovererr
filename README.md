@@ -1,3 +1,5 @@
+[![Go Reference](https://pkg.go.dev/badge/github.com/sermojohn/go-recovererr.svg)](https://pkg.go.dev/github.com/sermojohn/go-recovererr)
+
 # go-recovererr
 Provides `Recoverable(error) error` and `Unrecoverable(error) error` functions that wrap the given error with recovery context.
 

@@ -22,20 +22,17 @@ func Unrecoverable(err error) error {
 	return &recoverError{err: err}
 }
 
-// DoRecover can be used by error checkers to validate if error should be recovered.
-//
-// If the user marks errors as recoverable using `Recoverable(error)`, this function
-// should be used with fallback equal `false` because errors are unrecoverable by default
-// and recoverable are explicitly defined.
-// If the user marks errors as unrecoverable using `Unrecoverable(error)`, this function
-// should be used with fallback equal `true` because errors are recoverable by default
-// and unrecoverable are explicitly defined.
-func DoRecover(err error, fallback bool) bool {
+// DoRecover can be used by user to validate if error should be recovered.
+// When no recovery context is found in the given error, it returns
+// false in both values.
+// When recovery context is found in the given error, it returns
+// true in the first value and the recovery context of the error.
+func DoRecover(err error) (bool, bool) {
 	for err != nil {
 		if x, ok := err.(interface{ Recover() bool }); ok {
-			return x.Recover()
+			return true, x.Recover()
 		}
 		err = errors.Unwrap(err)
 	}
-	return fallback
+	return false, false
 }

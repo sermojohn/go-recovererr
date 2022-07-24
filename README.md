@@ -1,4 +1,5 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/sermojohn/go-recovererr.svg)](https://pkg.go.dev/github.com/sermojohn/go-recovererr)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sermojohn/go-recovererr)](https://goreportcard.com/report/github.com/sermojohn/go-recovererr)
 
 # go-recovererr
 

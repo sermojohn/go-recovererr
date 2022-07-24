@@ -5,26 +5,12 @@ import (
 	"time"
 )
 
-// func retry(ctx context.Context, f func() (bool, error), intervals <-chan time.Time) error {
-// 	for {
-// 		retry, err := f()
-// 		if err == nil {
-// 			return nil
-// 		}
-// 		if !retry {
-// 			return err
-// 		}
-
-// 		select {
-// 		case <-ctx.Done():
-// 			return ctx.Err()
-// 		case <-intervals:
-// 		}
-// 		// fmt.Println("will retry")
-// 	}
-// }
-
-func retry(ctx context.Context, f func() error, intervals <-chan time.Time, retryPolicy RetryPolicy) error {
+// Retry will run the provided function.
+// If the function fails, retryPolicy is used to extract
+// from the recovery context.
+// Retry will be performed on intervals provided by a time channel
+// until the context is cancelled.
+func Retry(ctx context.Context, f func() error, intervals <-chan time.Time, retryPolicy RetryPolicy) error {
 	for {
 		err := f()
 		if err == nil {
@@ -44,6 +30,7 @@ func retry(ctx context.Context, f func() error, intervals <-chan time.Time, retr
 	}
 }
 
+// RetryPolicy function implements the policy for performing a retry.
 type RetryPolicy func(error) bool
 
 // RetryRecoverablePolicy will return retry if error is recoverable

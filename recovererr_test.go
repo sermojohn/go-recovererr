@@ -1,4 +1,4 @@
-package recoverr
+package recovererr
 
 import (
 	"errors"
@@ -8,12 +8,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	ConnectionError = errors.New("connection error")
-	ParseError      = errors.New("parse error")
-)
-
 func TestDoRecover(t *testing.T) {
+	var (
+		ConnectionError = errors.New("connection error")
+		ParseError      = errors.New("parse error")
+	)
 	t.Run("recoverable wrapped error", func(t *testing.T) {
 		err := Recoverable(ConnectionError)
 		assert.True(t, DoRecover(err, false), err)
@@ -42,18 +41,6 @@ func TestDoRecover(t *testing.T) {
 	t.Run("other recover error implementation", func(t *testing.T) {
 		err := &otherRecoverError{recover: true}
 		assert.True(t, DoRecover(err, false), err)
-	})
-}
-
-func TestUnwrap(t *testing.T) {
-	t.Run("recoverable connection error", func(t *testing.T) {
-		err := Recoverable(ConnectionError)
-		assert.Equal(t, ConnectionError, errors.Unwrap(err))
-	})
-
-	t.Run("unrecoverable wrapped error", func(t *testing.T) {
-		err := Unrecoverable(ParseError)
-		assert.Equal(t, ParseError, errors.Unwrap(err))
 	})
 }
 

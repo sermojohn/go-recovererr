@@ -1,4 +1,4 @@
-module github.com/sermojohn/go-recoverr
+module github.com/sermojohn/go-recovererr
 
 go 1.18
 

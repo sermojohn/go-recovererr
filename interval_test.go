@@ -1,24 +1,64 @@
 package recovererr
 
 import (
-	"testing"
+	"context"
+	"errors"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
-func TestMaxRetrier(t *testing.T) {
-	mt := NewMaxTicker(5, 1)
+func ExampleRetry_Second() {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancelFunc()
 
-	var counter int
-	for i := 0; i < 100; i++ {
-		t := <-mt.c
-		if t != (time.Time{}) {
-			counter++
-		}
+	recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
 
-	}
+	r := NewRetrier(
+		WithRetryPolicy(RetryRecoverablePolicy),
+		WithIntervalGenerator(BackoffGenerator(1*time.Millisecond, 0, 1.5, 10*time.Millisecond, 10*time.Millisecond)))
+	r.Do(ctx, recoverErrorAction.Call)
 
-	assert.Equal(t, 5, counter)
-	assert.Equal(t, 0, len(mt.c))
+	// Output:
+	// action called 1 time(s)
+	// action called 2 time(s)
+	// action called 3 time(s)
+	// action called 4 time(s)
+	// action called 5 time(s)
+	// action called 6 time(s)
+}
+
+func ExampleRetry_First() {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancelFunc()
+
+	recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
+
+	r := NewRetrier(
+		WithRetryPolicy(RetryRecoverablePolicy),
+		WithIntervalGenerator(StaticAttemptsGenerator(5, 1*time.Nanosecond)))
+	r.Do(ctx, recoverErrorAction.Call)
+
+	// Output:
+	// action called 1 time(s)
+	// action called 2 time(s)
+	// action called 3 time(s)
+	// action called 4 time(s)
+	// action called 5 time(s)
+	// action called 6 time(s)
+}
+
+func ExampleRetry_Third() {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancelFunc()
+
+	recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
+
+	r := NewRetrier(
+		WithRetryPolicy(RetryRecoverablePolicy),
+		WithIntervalGenerator(StaticIntervalGenerator(4*time.Millisecond)))
+	r.Do(ctx, recoverErrorAction.Call)
+
+	// Output:
+	// action called 1 time(s)
+	// action called 2 time(s)
+	// action called 3 time(s)
 }

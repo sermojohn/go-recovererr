@@ -10,6 +10,15 @@ type ConstantBackoff struct {
 	counter int
 }
 
+func NewConstantBackoff(d time.Duration, max int) *ConstantBackoff {
+	cb := ConstantBackoff{
+		delay:     d,
+		afterFunc: time.After,
+		max:       max,
+	}
+	return &cb
+}
+
 func (cb *ConstantBackoff) Next() (time.Duration, bool) {
 	cb.counter++
 	if cb.counter > cb.max {
@@ -19,10 +28,5 @@ func (cb *ConstantBackoff) Next() (time.Duration, bool) {
 }
 
 func (cb *ConstantBackoff) After(d time.Duration) <-chan time.Time {
-	if cb.counter > cb.max {
-		ch := make(chan time.Time)
-		close(ch)
-		return ch
-	}
 	return cb.afterFunc(d)
 }

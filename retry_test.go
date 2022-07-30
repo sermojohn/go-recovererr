@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cenkalti/backoff"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +18,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 		defer cancelFunc()
 		recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
 
-		Retry(ctx, recoverErrorAction.Call, time.Tick(time.Millisecond), RetryRecoverablePolicy)
+		Retry(ctx, recoverErrorAction.Call, NewConstantBackoff(time.Millisecond, 10), RetryRecoverablePolicy)
 
 		assert.True(t, recoverErrorAction.callCounter > 1)
 	})
@@ -29,7 +28,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 		defer cancelFunc()
 		anyErrorAction := &action{errors: []error{errors.New("failure")}}
 
-		Retry(ctx, anyErrorAction.Call, time.Tick(time.Millisecond), RetryRecoverablePolicy)
+		Retry(ctx, anyErrorAction.Call, NewConstantBackoff(time.Millisecond, 10), RetryRecoverablePolicy)
 
 		assert.Equal(t, 1, anyErrorAction.callCounter)
 	})
@@ -39,7 +38,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 		defer cancelFunc()
 		unrecoverableErrorAction := &action{errors: []error{Unrecoverable(errors.New("failure"))}}
 
-		Retry(ctx, unrecoverableErrorAction.Call, time.Tick(time.Millisecond), RetryRecoverablePolicy)
+		Retry(ctx, unrecoverableErrorAction.Call, NewConstantBackoff(time.Millisecond, 10), RetryRecoverablePolicy)
 
 		assert.Equal(t, 1, unrecoverableErrorAction.callCounter)
 	})
@@ -49,7 +48,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 		defer cancelFunc()
 		noErrorAction := &action{errors: []error{}}
 
-		Retry(ctx, noErrorAction.Call, time.Tick(time.Millisecond), RetryRecoverablePolicy)
+		Retry(ctx, noErrorAction.Call, NewConstantBackoff(time.Millisecond, 10), RetryRecoverablePolicy)
 
 		assert.Equal(t, 1, noErrorAction.callCounter)
 	})
@@ -63,7 +62,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 		defer cancelFunc()
 		recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
 
-		Retry(ctx, recoverErrorAction.Call, time.Tick(time.Millisecond), RetryNonUnrecoverablePolicy)
+		Retry(ctx, recoverErrorAction.Call, NewConstantBackoff(time.Millisecond, 10), RetryNonUnrecoverablePolicy)
 
 		assert.True(t, recoverErrorAction.callCounter > 1)
 	})
@@ -73,7 +72,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 		defer cancelFunc()
 		anyErrorAction := &action{errors: []error{errors.New("failure")}}
 
-		Retry(ctx, anyErrorAction.Call, time.Tick(time.Millisecond), RetryNonUnrecoverablePolicy)
+		Retry(ctx, anyErrorAction.Call, NewConstantBackoff(time.Millisecond, 10), RetryNonUnrecoverablePolicy)
 
 		assert.True(t, anyErrorAction.callCounter > 0)
 	})
@@ -83,7 +82,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 		defer cancelFunc()
 		unrecoverableErrorAction := &action{errors: []error{Unrecoverable(errors.New("failure"))}}
 
-		Retry(ctx, unrecoverableErrorAction.Call, time.Tick(time.Millisecond), RetryNonUnrecoverablePolicy)
+		Retry(ctx, unrecoverableErrorAction.Call, NewConstantBackoff(time.Millisecond, 10), RetryNonUnrecoverablePolicy)
 
 		assert.Equal(t, 1, unrecoverableErrorAction.callCounter)
 	})
@@ -93,7 +92,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 		defer cancelFunc()
 		noErrorAction := &action{errors: []error{}}
 
-		Retry(ctx, noErrorAction.Call, time.Tick(time.Millisecond), RetryNonUnrecoverablePolicy)
+		Retry(ctx, noErrorAction.Call, NewConstantBackoff(time.Millisecond, 10), RetryNonUnrecoverablePolicy)
 
 		assert.Equal(t, 1, noErrorAction.callCounter)
 	})
@@ -118,22 +117,12 @@ func (a *action) Call() error {
 	return err
 }
 
-func ExampleRetry() {
-	backoffer := &backoff.ExponentialBackOff{
-		InitialInterval:     1 * time.Millisecond,
-		RandomizationFactor: 0,
-		Multiplier:          backoff.DefaultMultiplier,
-		MaxInterval:         10 * time.Millisecond,
-		MaxElapsedTime:      10 * time.Millisecond,
-		Clock:               backoff.SystemClock,
-	}
-	backoffer.Reset()
-
+func ExampleRetry_First() {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancelFunc()
 	recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
 
-	Retry(ctx, recoverErrorAction.Call, backoff.NewTicker(backoffer).C, RetryRecoverablePolicy)
+	_ = Retry(ctx, recoverErrorAction.Call, NewConstantBackoff(time.Millisecond, 5), RetryRecoverablePolicy)
 
 	// Output:
 	// action called 1 time(s)
@@ -142,4 +131,41 @@ func ExampleRetry() {
 	// action called 4 time(s)
 	// action called 5 time(s)
 	// action called 6 time(s)
+}
+
+func ExampleRetry_Second() {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancelFunc()
+	recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
+
+	mockClosk := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
+
+	backoffStrategy := NewExponentialBackoff(
+		WithInitialInterval(time.Millisecond),
+		WithRandomisationFactory(0),
+		WithMultiplier(1),
+		WithMaxElapsedTime(4*time.Millisecond),
+		WithMaxInterval(time.Millisecond),
+		WithClock(&mockClosk),
+	)
+
+	_ = Retry(ctx, recoverErrorAction.Call, backoffStrategy, RetryRecoverablePolicy)
+
+	// Output:
+	// action called 1 time(s)
+	// action called 2 time(s)
+	// action called 3 time(s)
+	// action called 4 time(s)
+	// action called 5 time(s)
+}
+
+type mockClock struct {
+	init     time.Time
+	interval time.Duration
+}
+
+func (mc *mockClock) Now() time.Time {
+	n := mc.init
+	mc.init = mc.init.Add(mc.interval)
+	return n
 }

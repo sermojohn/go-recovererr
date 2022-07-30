@@ -6,11 +6,10 @@ import (
 )
 
 // Retry will run the provided function.
-// If the function fails, retryPolicy is used to extract
-// from the recovery context.
+// If the function fails, retryPolicy is used to extract the recovery context.
 // Retry will be performed on intervals provided by a time channel
 // until the context is cancelled.
-func Retry(ctx context.Context, f func() error, intervals <-chan time.Time, retryPolicy RetryPolicy) error {
+func Retry(ctx context.Context, f func() error, backoffStrategy BackoffStrategy, retryPolicy RetryPolicy) error {
 	for {
 		err := f()
 		if err == nil {
@@ -21,10 +20,15 @@ func Retry(ctx context.Context, f func() error, intervals <-chan time.Time, retr
 			return err
 		}
 
+		delay, doDelay := backoffStrategy.Next()
+		if !doDelay {
+			return err
+		}
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-intervals:
+		case <-backoffStrategy.After(delay):
 		}
 	}
 }
@@ -44,4 +48,10 @@ func RetryRecoverablePolicy(err error) bool {
 func RetryNonUnrecoverablePolicy(err error) bool {
 	found, recover := DoRecover(err)
 	return !found || recover
+}
+
+// BackoffStrategy provides different backoff methods for the retry mechanism.
+type BackoffStrategy interface {
+	Next() (time.Duration, bool)
+	After(time.Duration) <-chan time.Time
 }

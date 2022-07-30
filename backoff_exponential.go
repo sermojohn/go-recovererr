@@ -6,11 +6,13 @@ import (
 	"github.com/cenkalti/backoff"
 )
 
+// ConstantBackoff implements backoff strategy using using exponentially increased delays.
 type ExponentialBackoff struct {
 	expBackoff backoff.ExponentialBackOff
 	afterFunc  func(time.Duration) <-chan time.Time
 }
 
+// NewExponentialBackoff creates new exponential backoff using provided options.
 func NewExponentialBackoff(opts ...Option) *ExponentialBackoff {
 	bo := ExponentialBackoff{
 		expBackoff: backoff.ExponentialBackOff{
@@ -67,6 +69,7 @@ func WithClock(clock backoff.Clock) Option {
 	}
 }
 
+// Next implements the BackoffStrategy.Next method.
 func (eb *ExponentialBackoff) Next() (time.Duration, bool) {
 	d := eb.expBackoff.NextBackOff()
 	if d == backoff.Stop {
@@ -75,6 +78,8 @@ func (eb *ExponentialBackoff) Next() (time.Duration, bool) {
 
 	return d, true
 }
+
+// After implements the BackoffStrategy.After method.
 func (eb *ExponentialBackoff) After(d time.Duration) <-chan time.Time {
 	return eb.afterFunc(d)
 }

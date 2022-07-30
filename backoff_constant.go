@@ -2,6 +2,7 @@ package recovererr
 
 import "time"
 
+// ConstantBackoff implements backoff strategy using constant delay and max attempts.
 type ConstantBackoff struct {
 	delay     time.Duration
 	afterFunc func(time.Duration) <-chan time.Time
@@ -10,6 +11,7 @@ type ConstantBackoff struct {
 	counter int
 }
 
+// NewConstantBackoff creates new constant backoff using provided parameters.
 func NewConstantBackoff(d time.Duration, max int) *ConstantBackoff {
 	cb := ConstantBackoff{
 		delay:     d,
@@ -19,6 +21,7 @@ func NewConstantBackoff(d time.Duration, max int) *ConstantBackoff {
 	return &cb
 }
 
+// Next implements the BackoffStrategy.Next method.
 func (cb *ConstantBackoff) Next() (time.Duration, bool) {
 	cb.counter++
 	if cb.counter > cb.max {
@@ -27,6 +30,7 @@ func (cb *ConstantBackoff) Next() (time.Duration, bool) {
 	return cb.delay, true
 }
 
+// After implements the BackoffStrategy.After method.
 func (cb *ConstantBackoff) After(d time.Duration) <-chan time.Time {
 	return cb.afterFunc(d)
 }

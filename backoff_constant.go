@@ -29,8 +29,3 @@ func (cb *ConstantBackoff) Next() (time.Duration, bool) {
 	}
 	return cb.delay, true
 }
-
-// After implements the BackoffStrategy.After method.
-func (cb *ConstantBackoff) After(d time.Duration) <-chan time.Time {
-	return cb.afterFunc(d)
-}

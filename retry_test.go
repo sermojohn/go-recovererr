@@ -185,6 +185,18 @@ func ExampleRetry_Third() {
 	// action called 2 time(s)
 }
 
+type customError struct {
+	recoverable bool
+	message     string
+}
+
+func (ce *customError) Recover() bool {
+	return ce.recoverable
+}
+func (ce *customError) Error() string {
+	return fmt.Sprintf("recoverable:%t, message:%s", ce.recoverable, ce.message)
+}
+
 func Test_retry_expired(t *testing.T) {
 	t.Parallel()
 

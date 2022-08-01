@@ -65,8 +65,9 @@ The package provides `Recoverable` and `Unrecoverable` public functions to wrap 
 Also provides `DoRecover` function to check the recovery context of any error.
 
 ### Retry
-The package provides `Retry` function that receives a function that can return an error. 
-The `RetryPolicy` is also provided to check the error recovery context on failure and define if the function should be retried.
-`Retry` will perform a retry on function failure, after the intervals channel fires, until the provided context.Context is cancelled.
+The package provides function `Retry` that receives a function that optionally returns an error. 
+The `RetryPolicy` is provided to `Retry`, to check the error recovery context on failure and define if the function should be retried.
+The `BackoffStrategy` is provided to defind the delay applied before each retry performing either `constant` or `exponential` backoff.
+If context.Context gets cancelled no extra retry will be performed, but the original error will be wrapped to the timeout error.
 
 

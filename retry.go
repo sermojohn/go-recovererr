@@ -2,6 +2,7 @@ package recovererr
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -33,7 +34,7 @@ func retry(ctx context.Context, f func() error, clock Clock, backoffStrategy Bac
 		// wait or cancel
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("%s, %w", ctx.Err(), err)
 		case <-clock.After(delay):
 		}
 	}

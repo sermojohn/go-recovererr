@@ -184,3 +184,24 @@ func ExampleRetry_Third() {
 	// action called 1 time(s)
 	// action called 2 time(s)
 }
+
+func Test_retry_expired(t *testing.T) {
+	t.Parallel()
+
+	t.Run("expired context of recoverable error", func(t *testing.T) {
+		action := func() error {
+			return &customError{recoverable: true, message: "custom message"}
+		}
+
+		backoff := NewConstantBackoff(10*time.Millisecond, 0)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancelFunc()
+
+		err := Retry(ctx, action, backoff, RetryRecoverablePolicy)
+
+		_, recoverable := DoRecover(err)
+		assert.True(t, recoverable)
+		assert.Equal(t, "context deadline exceeded, recoverable:true, message:custom message", err.Error())
+
+	})
+}

@@ -5,6 +5,10 @@
 go get -u github.com/sermojohn/go-recovererr
 ```
 
+## Naming
+The package name was conceived by merging `recover` and `error` and can be pronounced as recoverer.
+
+
 ## Usage
 1. Wrap recoverable errors with an error value implementing `Recover() bool`:
 ```
@@ -21,30 +25,39 @@ func (ce *customError) Error() string {
 }
 ```
 
-2. Retry action of recoverable error per 1 second forever:
+2. Retry action of recoverable error per 1sec forever:
 ```
 action := func() error {
-    ...
+    return &customError{recoverable: true}
 }
+
 backoff := NewConstantBackoff(time.Second, 0)
-Retry(context.Background(), action, backoff, RetryRecoverablePolicy)
+
+_ = Retry(context.Background(), action, backoff, RetryRecoverablePolicy)
 ```
 
-3. Retry action of recoverable error using exponential backoff starting with 1 second:
+3. Retry action of recoverable error using exponential backoff starting with 1sec until 5sec elapse:
 ```
 action := func() error {
-    ...
+    return &customError{recoverable: true}
 }
 backoff := NewExponentialBackoff(
     WithInitialInterval(time.Second), 
     WithMaxElapsedTime(5*time.Second),
 )
-Retry(context.Background(), action, backoff, RetryRecoverablePolicy)
+
+_ = Retry(context.Background(), action, backoff, RetryRecoverablePolicy)
 ```
 
-### Naming
-The package name was conceived by merging `recover` and `error` and can be pronounced as recoverer.
+4. Retry action of non unrecoverable error:
+```
+action := func() error {
+    return errors.New("any error")
+}
+backoff := NewConstantBackoff(time.Second, 0)
 
+_ = Retry(context.Background(), action, backoff, RetryNonUnrecoverablePolicy)
+```
 ## Description
 
 ### Error recovery context

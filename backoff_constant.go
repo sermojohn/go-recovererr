@@ -24,7 +24,7 @@ func NewConstantBackoff(d time.Duration, max int) *ConstantBackoff {
 // Next implements the BackoffStrategy.Next method.
 func (cb *ConstantBackoff) Next() (time.Duration, bool) {
 	cb.counter++
-	if cb.counter > cb.max {
+	if cb.max > 0 && cb.counter > cb.max {
 		return 0, false
 	}
 	return cb.delay, true

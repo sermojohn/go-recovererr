@@ -6,7 +6,41 @@ go get -u github.com/sermojohn/go-recovererr
 ```
 
 ## Usage
-TBD
+1. Wrap recoverable errors with an error value implementing `Recover() bool`:
+```
+type customError struct {
+	recoverable bool
+	message     string
+}
+
+func (ce *customError) Recover() bool {
+	return ce.recoverable
+}
+func (ce *customError) Error() string {
+	return fmt.Sprintf("recoverable:%t, message:%s", ce.recoverable, ce.message)
+}
+```
+
+2. Retry action of recoverable error per 1 second forever:
+```
+action := func() error {
+    ...
+}
+backoff := NewConstantBackoff(time.Second, 0)
+Retry(context.Background(), action, backoff, RetryRecoverablePolicy)
+```
+
+3. Retry action of recoverable error using exponential backoff starting with 1 second:
+```
+action := func() error {
+    ...
+}
+backoff := NewExponentialBackoff(
+    WithInitialInterval(time.Second), 
+    WithMaxElapsedTime(5*time.Second),
+)
+Retry(context.Background(), action, backoff, RetryRecoverablePolicy)
+```
 
 ### Naming
 The package name was conceived by merging `recover` and `error` and can be pronounced as recoverer.

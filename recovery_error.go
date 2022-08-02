@@ -2,13 +2,13 @@ package recovererr
 
 import "strings"
 
-type recoverError struct {
+type recoveryError struct {
 	recover bool
 	err     error
 }
 
 // Error returns the error in string format.
-func (re recoverError) Error() string {
+func (re recoveryError) Error() string {
 	sb := strings.Builder{}
 	if re.recover {
 		sb.WriteString("recover: ")
@@ -20,11 +20,11 @@ func (re recoverError) Error() string {
 }
 
 // Recover provides if should recover from error.
-func (re recoverError) Recover() bool {
+func (re recoveryError) Recover() bool {
 	return re.recover
 }
 
 // Unwrap provides the wrapped error.
-func (re recoverError) Unwrap() error {
+func (re recoveryError) Unwrap() error {
 	return re.err
 }

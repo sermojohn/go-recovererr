@@ -11,11 +11,11 @@ type recoverError struct {
 func (re recoverError) Error() string {
 	sb := strings.Builder{}
 	if re.recover {
-		sb.Write([]byte("recover: "))
+		sb.WriteString("recover: ")
 	} else {
-		sb.Write([]byte("unrecover: "))
+		sb.WriteString("unrecover: ")
 	}
-	sb.Write([]byte(re.err.Error()))
+	sb.WriteString(re.err.Error())
 	return sb.String()
 }
 

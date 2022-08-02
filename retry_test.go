@@ -18,7 +18,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
-		_ = retry(context.Background(), recoverErrorAction.Call, &mockClock, NewConstantBackoff(time.Millisecond, 10), RetryRecoverablePolicy)
+		_ = retry(context.Background(), recoverErrorAction.Call, &mockClock, NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(10)), RetryRecoverablePolicy)
 
 		assert.True(t, recoverErrorAction.callCounter == 11)
 	})
@@ -28,7 +28,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
-		_ = retry(context.Background(), anyErrorAction.Call, &mockClock, NewConstantBackoff(time.Millisecond, 10), RetryRecoverablePolicy)
+		_ = retry(context.Background(), anyErrorAction.Call, &mockClock, NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(10)), RetryRecoverablePolicy)
 
 		assert.Equal(t, 1, anyErrorAction.callCounter)
 	})
@@ -38,7 +38,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
-		_ = retry(context.Background(), unrecoverableErrorAction.Call, &mockClock, NewConstantBackoff(time.Millisecond, 10), RetryRecoverablePolicy)
+		_ = retry(context.Background(), unrecoverableErrorAction.Call, &mockClock, NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(10)), RetryRecoverablePolicy)
 
 		assert.Equal(t, 1, unrecoverableErrorAction.callCounter)
 	})
@@ -48,7 +48,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
-		_ = retry(context.Background(), noErrorAction.Call, &mockClock, NewConstantBackoff(time.Millisecond, 10), RetryRecoverablePolicy)
+		_ = retry(context.Background(), noErrorAction.Call, &mockClock, NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(10)), RetryRecoverablePolicy)
 
 		assert.Equal(t, 1, noErrorAction.callCounter)
 	})
@@ -62,7 +62,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
-		_ = retry(context.Background(), recoverErrorAction.Call, &mockClock, NewConstantBackoff(time.Millisecond, 10), RetryNonUnrecoverablePolicy)
+		_ = retry(context.Background(), recoverErrorAction.Call, &mockClock, NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(10)), RetryNonUnrecoverablePolicy)
 
 		assert.True(t, recoverErrorAction.callCounter > 1)
 	})
@@ -72,7 +72,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
-		_ = retry(context.Background(), anyErrorAction.Call, &mockClock, NewConstantBackoff(time.Millisecond, 10), RetryNonUnrecoverablePolicy)
+		_ = retry(context.Background(), anyErrorAction.Call, &mockClock, NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(10)), RetryNonUnrecoverablePolicy)
 
 		assert.True(t, anyErrorAction.callCounter > 0)
 	})
@@ -82,7 +82,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
-		_ = retry(context.Background(), unrecoverableErrorAction.Call, &mockClock, NewConstantBackoff(time.Millisecond, 10), RetryNonUnrecoverablePolicy)
+		_ = retry(context.Background(), unrecoverableErrorAction.Call, &mockClock, NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(10)), RetryNonUnrecoverablePolicy)
 
 		assert.Equal(t, 1, unrecoverableErrorAction.callCounter)
 	})
@@ -92,7 +92,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
-		_ = retry(context.Background(), noErrorAction.Call, &mockClock, NewConstantBackoff(time.Millisecond, 10), RetryNonUnrecoverablePolicy)
+		_ = retry(context.Background(), noErrorAction.Call, &mockClock, NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(10)), RetryNonUnrecoverablePolicy)
 
 		assert.Equal(t, 1, noErrorAction.callCounter)
 	})
@@ -120,7 +120,7 @@ func (a *action) Call() error {
 func ExampleRetry_First() {
 	recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
 
-	_ = Retry(context.Background(), recoverErrorAction.Call, NewConstantBackoff(time.Millisecond, 5), RetryRecoverablePolicy)
+	_ = Retry(context.Background(), recoverErrorAction.Call, NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(5)), RetryRecoverablePolicy)
 
 	// Output:
 	// action called 1 time(s)
@@ -178,7 +178,7 @@ func ExampleRetry_Third() {
 
 	recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
 
-	_ = Retry(ctx, recoverErrorAction.Call, NewConstantBackoff(time.Millisecond, 5), RetryRecoverablePolicy)
+	_ = Retry(ctx, recoverErrorAction.Call, NewConstantBackoff(WithInterval(time.Millisecond)), RetryRecoverablePolicy)
 
 	// Output:
 	// action called 1 time(s)
@@ -205,7 +205,7 @@ func Test_retry_expired(t *testing.T) {
 			return &customError{recoverable: true, message: "custom message"}
 		}
 
-		backoff := NewConstantBackoff(10*time.Millisecond, 0)
+		backoff := NewConstantBackoff()
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancelFunc()
 

@@ -2,29 +2,29 @@ package recovererr
 
 import "strings"
 
-type recoverError struct {
+type recoveryError struct {
 	recover bool
 	err     error
 }
 
 // Error returns the error in string format.
-func (re recoverError) Error() string {
+func (re recoveryError) Error() string {
 	sb := strings.Builder{}
 	if re.recover {
-		sb.Write([]byte("recover: "))
+		sb.WriteString("recover: ")
 	} else {
-		sb.Write([]byte("unrecover: "))
+		sb.WriteString("unrecover: ")
 	}
-	sb.Write([]byte(re.err.Error()))
+	sb.WriteString(re.err.Error())
 	return sb.String()
 }
 
 // Recover provides if should recover from error.
-func (re recoverError) Recover() bool {
+func (re recoveryError) Recover() bool {
 	return re.recover
 }
 
 // Unwrap provides the wrapped error.
-func (re recoverError) Unwrap() error {
+func (re recoveryError) Unwrap() error {
 	return re.err
 }

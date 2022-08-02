@@ -11,7 +11,7 @@ func Recoverable(err error) error {
 	if err == nil {
 		panic("recoverror: error cannot be nil")
 	}
-	return &recoverError{err: err, recover: true}
+	return &recoveryError{err: err, recover: true}
 }
 
 // Unrecoverable wraps an error as unrecoverable.
@@ -19,7 +19,7 @@ func Unrecoverable(err error) error {
 	if err == nil {
 		panic("recoverror: error cannot be nil")
 	}
-	return &recoverError{err: err}
+	return &recoveryError{err: err}
 }
 
 // DoRecover can be used by user to validate if error should be recovered.

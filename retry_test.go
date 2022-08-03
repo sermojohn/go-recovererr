@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 	"time"
 
@@ -14,7 +15,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 	t.Parallel()
 
 	t.Run("retry recoverable until maximum", func(t *testing.T) {
-		recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
+		recoverErrorAction := &mockAction{errors: []error{Recoverable(errors.New("failure"))}}
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
@@ -24,7 +25,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 	})
 
 	t.Run("no retry for any other error", func(t *testing.T) {
-		anyErrorAction := &action{errors: []error{errors.New("failure")}}
+		anyErrorAction := &mockAction{errors: []error{errors.New("failure")}}
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
@@ -34,7 +35,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 	})
 
 	t.Run("no retry for unrecoverable error", func(t *testing.T) {
-		unrecoverableErrorAction := &action{errors: []error{Unrecoverable(errors.New("failure"))}}
+		unrecoverableErrorAction := &mockAction{errors: []error{Unrecoverable(errors.New("failure"))}}
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
@@ -44,7 +45,7 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 	})
 
 	t.Run("no retry on no error", func(t *testing.T) {
-		noErrorAction := &action{errors: []error{}}
+		noErrorAction := &mockAction{errors: []error{}}
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
@@ -58,7 +59,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 	t.Parallel()
 
 	t.Run("retry recoverable until cancellation", func(t *testing.T) {
-		recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
+		recoverErrorAction := &mockAction{errors: []error{Recoverable(errors.New("failure"))}}
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
@@ -68,7 +69,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 	})
 
 	t.Run("retry any other error until cancellation", func(t *testing.T) {
-		anyErrorAction := &action{errors: []error{errors.New("failure")}}
+		anyErrorAction := &mockAction{errors: []error{errors.New("failure")}}
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
@@ -78,7 +79,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 	})
 
 	t.Run("skip retry for unrecoverable error", func(t *testing.T) {
-		unrecoverableErrorAction := &action{errors: []error{Unrecoverable(errors.New("failure"))}}
+		unrecoverableErrorAction := &mockAction{errors: []error{Unrecoverable(errors.New("failure"))}}
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
@@ -88,7 +89,7 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 	})
 
 	t.Run("no retry on no error", func(t *testing.T) {
-		noErrorAction := &action{errors: []error{}}
+		noErrorAction := &mockAction{errors: []error{}}
 
 		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
@@ -98,27 +99,27 @@ func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {
 	})
 }
 
-type action struct {
+type mockAction struct {
 	callCounter int
 	errors      []error
 }
 
-func (a *action) Call() error {
-	a.callCounter++
-	fmt.Printf("action called %d time(s)\n", a.callCounter)
+func (ma *mockAction) Call() error {
+	ma.callCounter++
+	fmt.Printf("action called %d time(s)\n", ma.callCounter)
 
 	var err error
-	if len(a.errors) > 0 {
-		err = a.errors[0]
+	if len(ma.errors) > 0 {
+		err = ma.errors[0]
 	}
-	if len(a.errors) > 1 {
-		a.errors = a.errors[1:]
+	if len(ma.errors) > 1 {
+		ma.errors = ma.errors[1:]
 	}
 	return err
 }
 
 func ExampleRetry_First() {
-	recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
+	recoverErrorAction := &mockAction{errors: []error{Recoverable(errors.New("failure"))}}
 
 	_ = Retry(context.Background(), recoverErrorAction.Call, NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(5)), RetryRecoverablePolicy)
 
@@ -132,7 +133,7 @@ func ExampleRetry_First() {
 }
 
 func ExampleRetry_Second() {
-	recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
+	recoverErrorAction := &mockAction{errors: []error{Recoverable(errors.New("failure"))}}
 
 	mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
 
@@ -176,7 +177,7 @@ func ExampleRetry_Third() {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 2*time.Millisecond)
 	defer cancelFunc()
 
-	recoverErrorAction := &action{errors: []error{Recoverable(errors.New("failure"))}}
+	recoverErrorAction := &mockAction{errors: []error{Recoverable(errors.New("failure"))}}
 
 	_ = Retry(ctx, recoverErrorAction.Call, NewConstantBackoff(WithInterval(time.Millisecond)), RetryRecoverablePolicy)
 
@@ -197,7 +198,7 @@ func (ce *customError) Error() string {
 	return fmt.Sprintf("recoverable:%t, message:%s", ce.recoverable, ce.message)
 }
 
-func Test_retry_expired(t *testing.T) {
+func TestRetry_expired(t *testing.T) {
 	t.Parallel()
 
 	t.Run("expired context of recoverable error", func(t *testing.T) {
@@ -216,4 +217,139 @@ func Test_retry_expired(t *testing.T) {
 		assert.Equal(t, "context deadline exceeded, recoverable:true, message:custom message", err.Error())
 
 	})
+}
+
+func TestDo_expired(t *testing.T) {
+	t.Parallel()
+
+	t.Run("expired context of recoverable error", func(t *testing.T) {
+		action := func() error {
+			return &customError{recoverable: true, message: "custom message"}
+		}
+
+		newBackoff := func() BackoffStrategy {
+			cb := NewConstantBackoff()
+			return cb
+		}
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancelFunc()
+
+		err := Do(ctx, action, newBackoff, RetryRecoverablePolicy)
+
+		_, recoverable := DoRecover(err)
+		assert.True(t, recoverable)
+		assert.Equal(t, "context deadline exceeded, recoverable:true, message:custom message", err.Error())
+
+	})
+}
+
+func Test_do(t *testing.T) {
+	type args struct {
+		ctx                 context.Context
+		f                   *mockAction
+		clock               Clock
+		backoffStrategyFunc func() BackoffStrategy
+		retryPolicy         RetryPolicy
+	}
+	tests := []struct {
+		name       string
+		args       args
+		assertFunc func(*testing.T, *args, error)
+	}{
+		{
+			name: "no retry on no error",
+			args: args{
+				f: &mockAction{},
+			},
+			assertFunc: func(t *testing.T, a *args, err error) {},
+		},
+		{
+			name: "no retry for unrecoverable error",
+			args: args{
+				f:           &mockAction{errors: []error{Unrecoverable(fmt.Errorf("test"))}},
+				retryPolicy: RetryRecoverablePolicy,
+			},
+			assertFunc: func(t *testing.T, a *args, err error) {
+				assert.Equal(t, Unrecoverable(fmt.Errorf("test")), err)
+			},
+		},
+		{
+			name: "retry for recoverable error",
+			args: args{
+				ctx:         context.Background(),
+				f:           &mockAction{errors: []error{Recoverable(fmt.Errorf("test"))}},
+				retryPolicy: RetryRecoverablePolicy,
+				backoffStrategyFunc: func() BackoffStrategy {
+					return NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(3))
+				},
+				clock: &mockClock{init: time.Now(), interval: time.Nanosecond},
+			},
+			assertFunc: func(t *testing.T, a *args, err error) {
+				assert.Equal(t, Recoverable(fmt.Errorf("test")), err)
+			},
+		},
+		{
+			name: "retry until recovered",
+			args: args{
+				ctx:         context.Background(),
+				f:           &mockAction{errors: []error{Recoverable(fmt.Errorf("test")), nil}},
+				retryPolicy: RetryRecoverablePolicy,
+				backoffStrategyFunc: func() BackoffStrategy {
+					return NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(10))
+				},
+				clock: &mockClock{init: time.Now(), interval: time.Nanosecond},
+			},
+			assertFunc: func(t *testing.T, a *args, err error) {
+				assert.Nil(t, err)
+				assert.Equal(t, 2, a.f.callCounter)
+			},
+		},
+		{
+			name: "retry until expiration",
+			args: args{
+				ctx:         contextWithTimeout(time.Millisecond),
+				f:           &mockAction{errors: []error{Recoverable(io.EOF)}},
+				retryPolicy: RetryRecoverablePolicy,
+				backoffStrategyFunc: func() BackoffStrategy {
+					return NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(3))
+				},
+				clock: &SystemClock{},
+			},
+			assertFunc: func(t *testing.T, a *args, err error) {
+				assert.True(t, errors.Is(err, io.EOF), err)
+
+			},
+		},
+		{
+			name: "no retry on finished backoff",
+			args: args{
+				ctx:         contextWithTimeout(time.Millisecond),
+				f:           &mockAction{errors: []error{Recoverable(io.EOF)}},
+				retryPolicy: RetryRecoverablePolicy,
+				backoffStrategyFunc: func() BackoffStrategy {
+					cb := NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(1))
+					// make the backoff complete
+					cb.Next()
+					return cb
+				},
+				clock: &SystemClock{},
+			},
+			assertFunc: func(t *testing.T, a *args, err error) {
+				assert.True(t, errors.Is(err, io.EOF), err)
+				assert.Equal(t, 1, a.f.callCounter)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := do(tt.args.ctx, tt.args.f.Call, tt.args.clock, tt.args.backoffStrategyFunc, tt.args.retryPolicy)
+
+			tt.assertFunc(t, &tt.args, err)
+		})
+	}
+}
+
+func contextWithTimeout(d time.Duration) context.Context {
+	ctx, _ := context.WithTimeout(context.Background(), d)
+	return ctx
 }

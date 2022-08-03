@@ -6,10 +6,46 @@ import (
 	"time"
 )
 
+// DoAndRetry will run a funtion and initiate retries if it fails.
+//
+// The call to `Retry` is postponed until an error is returned by the function.
+func Do(ctx context.Context, f func() error, newBackoffStrategy func() BackoffStrategy, retryPolicy RetryPolicy) error {
+	return do(ctx, f, &SystemClock{}, newBackoffStrategy, retryPolicy)
+}
+
+func do(ctx context.Context, f func() error, clock Clock, newBackoffStrategy func() BackoffStrategy, retryPolicy RetryPolicy) error {
+	err := f()
+	if err == nil {
+		return nil
+	}
+
+	// exit if should not retry
+	if !retryPolicy(err) {
+		return err
+	}
+
+	// initiate backoff strategy
+	backoffStrategy := newBackoffStrategy()
+
+	delay, doRetry := backoffStrategy.Next()
+	// exit if delay is over
+	if !doRetry {
+		return err
+	}
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("%s, %w", ctx.Err(), err)
+	case <-clock.After(delay):
+	}
+
+	return retry(ctx, f, clock, backoffStrategy, retryPolicy)
+}
+
 // Retry will run the provided function.
+//
 // If the function fails, retryPolicy is used to extract the recovery context.
-// Retry will be performed on intervals provided by a time channel
-// until the context is cancelled.
+// Retry will be performed on intervals provided by a time channel until the context is cancelled.
 func Retry(ctx context.Context, f func() error, backoffStrategy BackoffStrategy, retryPolicy RetryPolicy) error {
 	return retry(ctx, f, &SystemClock{}, backoffStrategy, retryPolicy)
 }
@@ -25,9 +61,9 @@ func retry(ctx context.Context, f func() error, clock Clock, backoffStrategy Bac
 			return err
 		}
 
-		delay, doDelay := backoffStrategy.Next()
+		delay, doRetry := backoffStrategy.Next()
 		// exit if delay is over
-		if !doDelay {
+		if !doRetry {
 			return err
 		}
 

@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// DoAndRetry will run a funtion and initiate retries if it fails.
+// Do will run a funtion and initiate retries if it fails.
 //
 // The call to `Retry` is postponed until an error is returned by the function.
 func Do(ctx context.Context, f func() error, newBackoffStrategy func() BackoffStrategy, retryPolicy RetryPolicy) error {

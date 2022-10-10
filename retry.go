@@ -15,9 +15,6 @@ func Do(ctx context.Context, f func() error, newBackoffStrategy func() BackoffSt
 
 func do(ctx context.Context, f func() error, clock Clock, newBackoffStrategy func() BackoffStrategy, retryPolicy RetryPolicy) error {
 	err := f()
-	if err == nil {
-		return nil
-	}
 
 	// exit if should not retry
 	if !retryPolicy(err) {
@@ -53,9 +50,6 @@ func Retry(ctx context.Context, f func() error, backoffStrategy BackoffStrategy,
 func retry(ctx context.Context, f func() error, clock Clock, backoffStrategy BackoffStrategy, retryPolicy RetryPolicy) error {
 	for {
 		err := f()
-		if err == nil {
-			return nil
-		}
 		// exit if should not retry
 		if !retryPolicy(err) {
 			return err
@@ -79,18 +73,40 @@ func retry(ctx context.Context, f func() error, clock Clock, backoffStrategy Bac
 // RetryPolicy function implements the policy for performing a retry.
 type RetryPolicy func(error) bool
 
-// RetryRecoverablePolicy will return retry if error is recoverable
-// and not retry otherwise or for errors with no recovery context.
+// RetryRecoverablePolicy defines if retry should be performed after receiving
+// the provided error by the retry mechanism.
+//
+// Returns:
+// 1. true if error is recoverable
+// 2. false for errors with no recovery context
+// 3. false when no err was provided
 func RetryRecoverablePolicy(err error) bool {
+	if err == nil {
+		return false
+	}
 	found, recover := DoRecover(err)
 	return found && recover
 }
 
-// RetryNonUnrecoverablePolicy will return retry if error is recoverable
-// or error with no recovery context is provided.
+// RetryNonUnrecoverablePolicy defines if retry should be performed after receiving
+// the provided error by the retry mechanism.
+//
+// Returns:
+// 1. true if error is not unrecoverable
+// 2. true for errors with no recovery context
+// 3. false when no err was provided
 func RetryNonUnrecoverablePolicy(err error) bool {
+	if err == nil {
+		return false
+	}
 	found, recover := DoRecover(err)
 	return !found || recover
+}
+
+// RetryForever is a retry policy that defines that whatever the input to be evaluated,
+// retry should be performed.
+func RetryForever(err error) bool {
+	return true
 }
 
 // BackoffStrategy provides different backoff methods for the retry mechanism.

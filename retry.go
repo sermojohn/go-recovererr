@@ -32,7 +32,10 @@ func do(ctx context.Context, f func() error, clock Clock, newBackoffStrategy fun
 
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("%s, %w", ctx.Err(), err)
+		if err != nil {
+			return fmt.Errorf("%v, %w", ctx.Err(), err)
+		}
+		return nil
 	case <-clock.After(delay):
 	}
 

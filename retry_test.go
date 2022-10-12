@@ -254,6 +254,8 @@ func TestDo_expired(t *testing.T) {
 }
 
 func Test_do(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		ctx                 context.Context
 		f                   *mockAction
@@ -350,6 +352,36 @@ func Test_do(t *testing.T) {
 				assert.Equal(t, 1, a.f.callCounter)
 			},
 		},
+		{
+			name: "cancel context after successful call",
+			args: args{
+				ctx:         &mockContext{done: true},
+				f:           &mockAction{},
+				retryPolicy: RetryRecoverablePolicy,
+				backoffStrategyFunc: func() BackoffStrategy {
+					return NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(1))
+				},
+				clock: &SystemClock{},
+			},
+			assertFunc: func(t *testing.T, a *args, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name: "cancel context after failed call",
+			args: args{
+				ctx:         &mockContext{done: true},
+				f:           &mockAction{errors: []error{errors.New("call failed")}},
+				retryPolicy: RetryRecoverablePolicy,
+				backoffStrategyFunc: func() BackoffStrategy {
+					return NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(1))
+				},
+				clock: &SystemClock{},
+			},
+			assertFunc: func(t *testing.T, a *args, err error) {
+				assert.Equal(t, err, errors.New("call failed"))
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -363,4 +395,32 @@ func Test_do(t *testing.T) {
 func contextWithTimeout(d time.Duration) context.Context {
 	ctx, _ := context.WithTimeout(context.Background(), d)
 	return ctx
+}
+
+type mockContext struct {
+	done         bool
+	err          error
+	val          interface{}
+	deadlineTime time.Time
+	deadlineSet  bool
+}
+
+func (mc *mockContext) Deadline() (deadline time.Time, ok bool) {
+	return mc.deadlineTime, mc.deadlineSet
+}
+
+func (mc *mockContext) Done() <-chan struct{} {
+	ch := make(chan struct{})
+	if mc.done {
+		close(ch)
+	}
+	return ch
+}
+
+func (mc *mockContext) Err() error {
+	return mc.err
+}
+
+func (mc *mockContext) Value(_ interface{}) interface{} {
+	return mc.val
 }

@@ -63,6 +63,29 @@ func TestRetry_retryRecoverablePolicy(t *testing.T) {
 
 		assert.Equal(t, 10, noErrorAction.callCounter)
 	})
+
+	t.Run("cancelled context after no error", func(t *testing.T) {
+		noErrorAction := &mockAction{errors: []error{}}
+
+		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
+
+		err := retry(&mockContext{done: true}, noErrorAction.Call, &mockClock, NewConstantBackoff(WithInterval(time.Millisecond)), RetryForever)
+
+		assert.Nil(t, err)
+	})
+
+	t.Run("cancelled context after call error", func(t *testing.T) {
+		var (
+			actionError  = errors.New("failed!")
+			failedAction = &mockAction{errors: []error{actionError}}
+		)
+
+		mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
+
+		err := retry(&mockContext{done: true}, failedAction.Call, &mockClock, NewConstantBackoff(WithInterval(time.Millisecond)), RetryForever)
+
+		assert.True(t, errors.Is(err, actionError))
+	})
 }
 
 func TestRetry_retryNonUnrecoverablePolicy(t *testing.T) {

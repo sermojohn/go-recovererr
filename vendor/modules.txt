@@ -1,6 +1,6 @@
-# github.com/cenkalti/backoff v2.2.1+incompatible
-## explicit
-github.com/cenkalti/backoff
+# github.com/cenkalti/backoff/v4 v4.1.3
+## explicit; go 1.13
+github.com/cenkalti/backoff/v4
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew

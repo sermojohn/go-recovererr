@@ -3,7 +3,7 @@ module github.com/sermojohn/go-recovererr
 go 1.18
 
 require (
-	github.com/cenkalti/backoff v2.2.1+incompatible
+	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/stretchr/testify v1.8.0
 )
 

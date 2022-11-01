@@ -151,44 +151,6 @@ func (ma *mockAction) Call() error {
 	return err
 }
 
-func ExampleRetry_First() {
-	recoverErrorAction := &mockAction{errors: []error{Recoverable(errors.New("failure"))}}
-
-	_ = Retry(context.Background(), recoverErrorAction.Call, NewConstantBackoff(WithInterval(time.Millisecond), WithMaxAttempts(5)), RetryRecoverablePolicy)
-
-	// Output:
-	// action called 1 time(s)
-	// action called 2 time(s)
-	// action called 3 time(s)
-	// action called 4 time(s)
-	// action called 5 time(s)
-	// action called 6 time(s)
-}
-
-func ExampleRetry_Second() {
-	recoverErrorAction := &mockAction{errors: []error{Recoverable(errors.New("failure"))}}
-
-	mockClock := mockClock{init: time.Unix(1659219915, 0), interval: time.Millisecond}
-
-	backoffStrategy := NewExponentialBackoff(
-		WithInitialInterval(time.Millisecond),
-		WithRandomisationFactory(0),
-		WithMultiplier(1),
-		WithMaxElapsedTime(4*time.Millisecond),
-		WithMaxInterval(time.Millisecond),
-		WithClock(&mockClock),
-	)
-
-	_ = retry(context.Background(), recoverErrorAction.Call, &mockClock, backoffStrategy, RetryRecoverablePolicy)
-
-	// Output:
-	// action called 1 time(s)
-	// action called 2 time(s)
-	// action called 3 time(s)
-	// action called 4 time(s)
-	// action called 5 time(s)
-}
-
 type mockClock struct {
 	init     time.Time
 	interval time.Duration
@@ -204,19 +166,6 @@ func (mc *mockClock) After(time.Duration) <-chan time.Time {
 	ch := make(chan time.Time)
 	close(ch)
 	return ch
-}
-
-func ExampleRetry_Third() {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 2*time.Millisecond)
-	defer cancelFunc()
-
-	recoverErrorAction := &mockAction{errors: []error{Recoverable(errors.New("failure"))}}
-
-	_ = Retry(ctx, recoverErrorAction.Call, NewConstantBackoff(WithInterval(time.Millisecond)), RetryRecoverablePolicy)
-
-	// Output:
-	// action called 1 time(s)
-	// action called 2 time(s)
 }
 
 type customError struct {
